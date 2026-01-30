@@ -1,0 +1,112 @@
+.card-swipe-container {
+  position: relative;
+  width: 100%;
+  max-width: 350px;
+  height: 450px;
+  margin: 0 auto;
+}
+
+.card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(145deg, #1e2a4a, #16213e);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.card:active {
+  cursor: grabbing;
+}
+
+.card-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.card-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.card-items-preview {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+  padding: 0 20px;
+}
+
+.card-hint {
+  position: absolute;
+  top: 20px;
+  font-size: 24px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.card-hint.left {
+  left: 20px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+}
+
+.card-hint.right {
+  right: 20px;
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
+}
+
+.card-hint.visible {
+  opacity: 1;
+}
+
+.swipe-instructions {
+  text-align: center;
+  margin-top: 20px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+}
+
+.swipe-instructions span {
+  margin: 0 20px;
+}
+
+.no-cards {
+  text-align: center;
+  padding: 40px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.no-cards button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #FF6B35, #ff8f5a);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.no-cards button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}
