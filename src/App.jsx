@@ -598,11 +598,12 @@ function App() {
               </button>
             </div>
 
-            <MindMap
+            {/* <MindMap
               categories={[finalCategory]}
               selectedCategory={finalCategory}
               showMenus={true}
-            />
+            /> */}
+            {/* TODO: MindMap crash on result screen to be fixed */}
 
             <h3 className="menu-section-title">추천 메뉴</h3>
 
