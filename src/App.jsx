@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { categories, excludeTags, priceRanges, moods } from './data/foodData';
+import { categories, excludeTags, priceRanges, moods, dietRestrictions } from './data/foodData';
 import { useFeatures } from './context/FeaturesContext';
 import MindMap from './components/MindMap';
 import Roulette from './components/Roulette';
@@ -12,11 +12,12 @@ const STEPS = {
   YESTERDAY: 1,
   WANTED: 2,
   EXCLUDE: 3,
-  PRICE: 4,
-  PEOPLE: 5,
-  SELECT_MENU: 6,
-  ROULETTE: 7,
-  RESULT: 8,
+  DIET: 4,
+  PRICE: 5,
+  PEOPLE: 6,
+  SELECT_MENU: 7,
+  ROULETTE: 8,
+  RESULT: 9,
 };
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
   const [wantedTab, setWantedTab] = useState('category'); // 'category' or 'mood'
   const [excludedCategories, setExcludedCategories] = useState([]);
   const [excludedTags, setExcludedTags] = useState([]);
+  const [selectedDiets, setSelectedDiets] = useState([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [peopleCount, setPeopleCount] = useState(1);
   const [currentPerson, setCurrentPerson] = useState(0);
@@ -106,6 +108,37 @@ function App() {
     });
   }, [filteredCategories, selectedMoods]);
 
+  // 식단 제한 필터링
+  const dietFilteredCategories = useMemo(() => {
+    if (selectedDiets.length === 0) {
+      return moodFilteredCategories;
+    }
+
+    // 선택된 식단 제한에서 제외해야 할 카테고리와 태그 수집
+    const excludedCategoryIds = new Set();
+    const excludedTagsFromDiets = new Set();
+
+    selectedDiets.forEach(dietId => {
+      const diet = dietRestrictions.find(d => d.id === dietId);
+      if (diet) {
+        diet.excludeCategories.forEach(id => excludedCategoryIds.add(id));
+        diet.excludeTags.forEach(tag => excludedTagsFromDiets.add(tag));
+      }
+    });
+
+    return moodFilteredCategories.filter(cat => {
+      // 카테고리 자체가 제외 목록에 있으면 제외
+      if (excludedCategoryIds.has(cat.id)) return false;
+
+      // 모든 메뉴 아이템이 제외 태그를 가지고 있으면 제외
+      const allItemsExcluded = cat.items.every(item =>
+        item.tags.some(tag => excludedTagsFromDiets.has(tag))
+      );
+
+      return !allItemsExcluded;
+    });
+  }, [moodFilteredCategories, selectedDiets]);
+
   // 태그 필터링
   const tagFilteredCategories = useMemo(() => {
     let filtered = filteredCategories;
@@ -164,6 +197,7 @@ function App() {
     setWantedTab('category');
     setExcludedCategories([]);
     setExcludedTags([]);
+    setSelectedDiets([]);
     setSelectedPriceRange(null);
     setPeopleCount(1);
     setCurrentPerson(0);
@@ -685,7 +719,7 @@ function App() {
                       })}
                     </div>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '12px' }}>
-                      👇 추천 카테고리 {moodFilteredCategories.length}개
+                      👇 추천 카테고리 {dietFilteredCategories.length}개
                     </p>
                   </div>
                 )}
@@ -693,7 +727,7 @@ function App() {
                 {/* 상황 기반 필터링된 카테고리 */}
                 {selectedMoods.length > 0 && (
                   <div className="options-grid" style={{ marginTop: '20px' }}>
-                    {moodFilteredCategories.map(cat => (
+                    {dietFilteredCategories.map(cat => (
                       <button
                         key={cat.id}
                         className={`option-btn ${wantedFoods.find(c => c.id === cat.id) ? 'selected' : ''}`}
@@ -778,6 +812,67 @@ function App() {
               <button className="btn btn-secondary" onClick={() => setStep(STEPS.WANTED)}>
                 이전
               </button>
+              <button className="btn btn-primary" onClick={() => setStep(STEPS.DIET)}>
+                다음
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: 식단 제한 */}
+        {step === STEPS.DIET && (
+          <div className="step-container">
+            <h2 className="step-title">식단 제한 있어?</h2>
+            <p className="step-description">알레르기나 식단 제한 사항을 선택해주세요 (여러 개 가능)</p>
+
+            <div className="diet-options">
+              {dietRestrictions.map(diet => (
+                <button
+                  key={diet.id}
+                  className={`diet-btn ${selectedDiets.includes(diet.id) ? 'selected' : ''}`}
+                  onClick={() => {
+                    if (selectedDiets.includes(diet.id)) {
+                      setSelectedDiets(selectedDiets.filter(id => id !== diet.id));
+                    } else {
+                      setSelectedDiets([...selectedDiets, diet.id]);
+                    }
+                  }}
+                >
+                  <span className="icon">{diet.icon}</span>
+                  <div className="diet-info">
+                    <span className="name">{diet.name}</span>
+                    <span className="description">{diet.description}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {selectedDiets.length > 0 && (
+              <div className="selection-summary">
+                <h4>선택한 제한 사항 {selectedDiets.length}개</h4>
+                <div className="chips">
+                  {selectedDiets.map(dietId => {
+                    const diet = dietRestrictions.find(d => d.id === dietId);
+                    return (
+                      <span key={dietId} className="chip selected">
+                        {diet.icon} {diet.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="action-buttons">
+              <button className="btn btn-secondary" onClick={() => setStep(STEPS.EXCLUDE)}>
+                이전
+              </button>
+              <button className="skip-btn" onClick={() => {
+                setSelectedDiets([]);
+                setStep(STEPS.PRICE);
+              }}>
+                없음
+              </button>
               <button className="btn btn-primary" onClick={() => setStep(STEPS.PRICE)}>
                 다음
               </button>
@@ -785,7 +880,7 @@ function App() {
           </div>
         )}
 
-        {/* Step 4: 가격대는? */}
+        {/* Step 5: 가격대는? */}
         {step === STEPS.PRICE && (
           <div className="step-container">
             <h2 className="step-title">예산은 얼마나?</h2>
@@ -805,7 +900,7 @@ function App() {
             </div>
 
             <div className="action-buttons">
-              <button className="btn btn-secondary" onClick={() => setStep(STEPS.EXCLUDE)}>
+              <button className="btn btn-secondary" onClick={() => setStep(STEPS.DIET)}>
                 이전
               </button>
               <button className="skip-btn" onClick={() => {
@@ -821,7 +916,7 @@ function App() {
           </div>
         )}
 
-        {/* Step 5: 몇 명? */}
+        {/* Step 6: 몇 명? */}
         {step === STEPS.PEOPLE && (
           <div className="step-container">
             <h2 className="step-title">몇 명이서 먹어?</h2>

@@ -294,6 +294,58 @@ export const timeWeights = {
   nightsnack: ['야식', '치킨', '피자', '분식', '족발/보쌈'],
 };
 
+// 식단/알레르기 제한 옵션
+export const dietRestrictions = [
+  {
+    id: 'vegetarian',
+    name: '채식 (비건/베지테리언)',
+    icon: '🥗',
+    description: '고기, 생선, 해산물 제외',
+    excludeTags: ['고기', '해산물', '날것'],
+    excludeCategories: ['meat', 'japanese', 'jokbal']
+  },
+  {
+    id: 'gluten-free',
+    name: '글루텐 프리',
+    icon: '🌾',
+    description: '밀가루 음식 제외',
+    excludeTags: ['면', '튀김', '빵'],
+    excludeCategories: ['noodles', 'pizza', 'snack']
+  },
+  {
+    id: 'dairy-free',
+    name: '유제품 제외',
+    icon: '🥛',
+    description: '우유, 치즈, 크림 제외',
+    excludeTags: ['크림', '치즈'],
+    excludeCategories: ['western', 'dessert', 'cafe']
+  },
+  {
+    id: 'seafood-allergy',
+    name: '해산물 알레르기',
+    icon: '🦐',
+    description: '생선, 조개류 제외',
+    excludeTags: ['해산물', '날것', '생선'],
+    excludeCategories: ['japanese']
+  },
+  {
+    id: 'nut-allergy',
+    name: '견과류 알레르기',
+    icon: '🥜',
+    description: '땅콩, 견과류 제외',
+    excludeTags: ['견과류'],
+    excludeCategories: []
+  },
+  {
+    id: 'halal',
+    name: '할랄 음식',
+    icon: '☪️',
+    description: '돼지고기 제외',
+    excludeTags: ['돼지', '돼지고기'],
+    excludeCategories: ['jokbal']
+  },
+];
+
 // 상황 기반 선택 (Mood-based selection)
 export const moods = [
   // 1. 컨디션/몸 상태

@@ -23,9 +23,9 @@ export default function Roulette({ choices, onComplete }) {
         const anglePerChoice = 360 / choices.length;
 
         // 선택된 항목이 위쪽(12시 방향) 포인터를 가리키도록 계산
-        // SVG 섹션이 -90도 오프셋으로 그려지므로 이를 반영
-        const sectionCenterAngle = winnerIndex * anglePerChoice + anglePerChoice / 2 - 90;
-        const targetAngle = spins * 360 + (360 - sectionCenterAngle);
+        // SVG 섹션은 -90도 오프셋으로 시작하므로, 역방향 회전 필요
+        const sectionCenterAngle = winnerIndex * anglePerChoice + anglePerChoice / 2;
+        const targetAngle = spins * 360 - sectionCenterAngle;
 
         console.log('Winner Index:', winnerIndex);
         console.log('Winner Category:', choices[winnerIndex].name);
