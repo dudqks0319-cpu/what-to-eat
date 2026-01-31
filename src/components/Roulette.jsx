@@ -18,19 +18,33 @@ export default function Roulette({ choices, onComplete }) {
         setIsSpinning(true);
         setWinner(null);
 
-        const spins = 5 + Math.random() * 3; // 5~8바퀴 회전
+        const spins = Math.floor(5 + Math.random() * 4); // 5~8바퀴 회전 (정수)
         const winnerIndex = Math.floor(Math.random() * choices.length);
         const anglePerChoice = 360 / choices.length;
 
+        // 디버깅: 모든 섹션 정보 출력
+        console.log('=== 룰렛 디버깅 시작 ===');
+        console.log('총 선택지 개수:', choices.length);
+        console.log('각 섹션 각도:', anglePerChoice);
+        console.log('선택지 순서:', choices.map((c, i) => `${i}: ${c.name}`).join(', '));
+
         // 선택된 항목이 위쪽(12시 방향) 포인터를 가리키도록 계산
-        // SVG 섹션은 -90도 오프셋으로 시작하므로, 역방향 회전 필요
+        // 포인터는 -90도 (또는 270도) 위치에 있음
+        // SVG 섹션은 index * anglePerChoice - 90 에서 시작
         const sectionCenterAngle = winnerIndex * anglePerChoice + anglePerChoice / 2;
         const targetAngle = spins * 360 - sectionCenterAngle;
 
-        console.log('Winner Index:', winnerIndex);
-        console.log('Winner Category:', choices[winnerIndex].name);
-        console.log('Section Center Angle:', sectionCenterAngle);
-        console.log('Target Angle:', targetAngle);
+        console.log('당첨 인덱스:', winnerIndex);
+        console.log('당첨 카테고리:', choices[winnerIndex].name);
+        console.log('섹션 중심 각도:', sectionCenterAngle, '도');
+        console.log('목표 회전 각도:', targetAngle, '도');
+
+        // 최종 위치 계산 (디버깅용)
+        const initialPosition = winnerIndex * anglePerChoice - 90 + anglePerChoice / 2;
+        const finalPosition = (initialPosition + targetAngle) % 360;
+        console.log('섹션 초기 위치:', initialPosition, '도');
+        console.log('회전 후 최종 위치:', finalPosition, '도 (목표: -90 또는 270도)');
+        console.log('=== 룰렛 디버깅 끝 ===');
 
         setRotation(targetAngle);
 
