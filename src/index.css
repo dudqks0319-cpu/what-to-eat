@@ -47,34 +47,62 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  background-color: #F0F2F5;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
   padding-bottom: 40px;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 #root {
   width: 100%;
-  max-width: 480px;
-  /* Mobile App View */
+  max-width: 1200px; /* 데스크톱에서 더 넓게 */
   min-height: 90vh;
-  /* 조금 여백 */
-  margin-top: 20px;
+  margin: 20px auto;
   background-color: #FFFFFF;
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   position: relative;
 }
 
-/* Mobile full width override if screen is small */
+/* 태블릿 */
+@media (max-width: 1024px) {
+  #root {
+    max-width: 768px;
+    margin: 16px;
+  }
+}
+
+/* 모바일 */
+@media (max-width: 768px) {
+  #root {
+    max-width: 600px;
+    margin: 12px;
+    border-radius: 20px;
+  }
+}
+
+/* 작은 모바일 */
 @media (max-width: 500px) {
   body {
     padding-bottom: 0;
-    margin-top: 0;
     background-color: #FFFFFF;
   }
 
   #root {
-    margin-top: 0;
+    margin: 0;
     max-width: 100%;
     border-radius: 0;
     min-height: 100vh;

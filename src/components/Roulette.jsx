@@ -18,17 +18,26 @@ export default function Roulette({ choices, onComplete }) {
         setIsSpinning(true);
         setWinner(null);
 
-        const spins = 5 + Math.random() * 3;
+        const spins = 5 + Math.random() * 3; // 5~8바퀴 회전
         const winnerIndex = Math.floor(Math.random() * choices.length);
         const anglePerChoice = 360 / choices.length;
-        // 선택된 항목이 위쪽 포인터를 가리키도록 계산
-        const targetAngle = spins * 360 + (360 - (winnerIndex * anglePerChoice + anglePerChoice / 2));
+
+        // 선택된 항목이 위쪽(12시 방향) 포인터를 가리키도록 계산
+        // SVG 섹션이 -90도 오프셋으로 그려지므로 이를 반영
+        const sectionCenterAngle = winnerIndex * anglePerChoice + anglePerChoice / 2 - 90;
+        const targetAngle = spins * 360 + (360 - sectionCenterAngle);
+
+        console.log('Winner Index:', winnerIndex);
+        console.log('Winner Category:', choices[winnerIndex].name);
+        console.log('Section Center Angle:', sectionCenterAngle);
+        console.log('Target Angle:', targetAngle);
 
         setRotation(targetAngle);
 
         setTimeout(() => {
             setIsSpinning(false);
             setWinner(choices[winnerIndex]);
+            console.log('Setting winner:', choices[winnerIndex].name);
         }, 4000);
     };
 

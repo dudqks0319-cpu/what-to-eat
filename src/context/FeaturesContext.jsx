@@ -37,6 +37,11 @@ function featuresReducer(state, action) {
         }
         case 'CLEAR_HISTORY':
             return { ...state, history: [] };
+        case 'REMOVE_HISTORY':
+            return {
+                ...state,
+                history: state.history.filter(entry => entry.id !== action.id)
+            };
         default:
             return state;
     }
@@ -74,6 +79,10 @@ export function FeaturesProvider({ children }) {
         dispatch({ type: 'CLEAR_HISTORY' });
     };
 
+    const removeHistoryItem = (id) => {
+        dispatch({ type: 'REMOVE_HISTORY', id });
+    };
+
     const isFavorite = (categoryId) => state.favorites.includes(categoryId);
     const isBlacklisted = (categoryId) => state.blacklist.includes(categoryId);
 
@@ -98,6 +107,7 @@ export function FeaturesProvider({ children }) {
             toggleBlacklist,
             addHistory,
             clearHistory,
+            removeHistoryItem,
             isFavorite,
             isBlacklisted,
             getStats,

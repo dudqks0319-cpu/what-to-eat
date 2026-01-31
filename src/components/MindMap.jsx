@@ -142,24 +142,20 @@ export default function MindMap({
     showMenus = false,
     favorites = []
 }) {
-    // 초기 노드/엣지
-    const initial = useMemo(() =>
+    // 노드/엣지 계산
+    const { nodes: calculatedNodes, edges: calculatedEdges } = useMemo(() =>
         createNodesAndEdges(categories, selectedCategory, showMenus, onCategoryClick, favorites),
-        []
+        [categories, selectedCategory, showMenus, favorites]
     );
 
-    const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
-    const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
+    const [nodes, setNodes, onNodesChange] = useNodesState(calculatedNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(calculatedEdges);
 
     // props 변경 시 업데이트
     useEffect(() => {
-        const { nodes: newNodes, edges: newEdges } = createNodesAndEdges(
-            categories, selectedCategory, showMenus, onCategoryClick, favorites
-        );
-        // 상태 업데이트를 직렬화하여 충돌 방지
-        setNodes(newNodes);
-        setEdges(newEdges);
-    }, [categories, selectedCategory, showMenus, favorites, onCategoryClick]);
+        setNodes(calculatedNodes);
+        setEdges(calculatedEdges);
+    }, [calculatedNodes, calculatedEdges, setNodes, setEdges]);
 
     return (
         <div className="mindmap-container">

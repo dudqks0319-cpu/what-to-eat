@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { categories, excludeTags } from './data/foodData';
+import { categories, excludeTags, priceRanges, moods } from './data/foodData';
 import { useFeatures } from './context/FeaturesContext';
 import MindMap from './components/MindMap';
 import Roulette from './components/Roulette';
+import ErrorBoundary from './components/ErrorBoundary';
+import KakaoMap from './components/KakaoMap';
 import './App.css';
 
 const STEPS = {
@@ -10,29 +12,35 @@ const STEPS = {
   YESTERDAY: 1,
   WANTED: 2,
   EXCLUDE: 3,
-  PEOPLE: 4,
-  SELECT_MENU: 5,
-  ROULETTE: 6,
-  RESULT: 7,
+  PRICE: 4,
+  PEOPLE: 5,
+  SELECT_MENU: 6,
+  ROULETTE: 7,
+  RESULT: 8,
 };
 
 function App() {
   const [step, setStep] = useState(STEPS.START);
   const [yesterdayChoices, setYesterdayChoices] = useState([]);
   const [wantedFoods, setWantedFoods] = useState([]);
+  const [selectedMoods, setSelectedMoods] = useState([]);
+  const [wantedTab, setWantedTab] = useState('category'); // 'category' or 'mood'
   const [excludedCategories, setExcludedCategories] = useState([]);
   const [excludedTags, setExcludedTags] = useState([]);
+  const [selectedPriceRange, setSelectedPriceRange] = useState(null);
   const [peopleCount, setPeopleCount] = useState(1);
   const [currentPerson, setCurrentPerson] = useState(0);
   const [peopleChoices, setPeopleChoices] = useState([]);
   const [finalCategory, setFinalCategory] = useState(null);
   const [menuSelections, setMenuSelections] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showBlacklist, setShowBlacklist] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const {
     favorites, blacklist, history,
     toggleFavorite, toggleBlacklist, addHistory,
-    isFavorite, isBlacklisted, getStats, clearHistory
+    isFavorite, isBlacklisted, getStats, clearHistory, removeHistoryItem
   } = useFeatures();
 
   // 시간대 감지
@@ -62,17 +70,63 @@ function App() {
     });
   }, [yesterdayChoices, excludedCategories, blacklist]);
 
+  // 상황 기반 필터링
+  const moodFilteredCategories = useMemo(() => {
+    if (selectedMoods.length === 0) {
+      return filteredCategories;
+    }
+
+    // 선택된 상황들에서 추천하는 카테고리 ID들 수집
+    const recommendedCategoryIds = new Set();
+    const recommendedTags = new Set();
+    const excludedTagsFromMoods = new Set();
+
+    selectedMoods.forEach(moodId => {
+      const mood = moods.find(m => m.id === moodId);
+      if (mood) {
+        mood.categoryIds.forEach(id => recommendedCategoryIds.add(id));
+        mood.tags.forEach(tag => recommendedTags.add(tag));
+        mood.excludeTags.forEach(tag => excludedTagsFromMoods.add(tag));
+      }
+    });
+
+    return filteredCategories.filter(cat => {
+      // 카테고리 ID가 추천 목록에 있거나
+      if (recommendedCategoryIds.has(cat.id)) return true;
+
+      // 태그 기반 필터링
+      const hasRecommendedTag = cat.items.some(item =>
+        item.tags.some(tag => recommendedTags.has(tag))
+      );
+      const hasExcludedTag = cat.items.some(item =>
+        item.tags.some(tag => excludedTagsFromMoods.has(tag))
+      );
+
+      return hasRecommendedTag && !hasExcludedTag;
+    });
+  }, [filteredCategories, selectedMoods]);
+
   // 태그 필터링
   const tagFilteredCategories = useMemo(() => {
-    if (excludedTags.length === 0) return filteredCategories;
+    let filtered = filteredCategories;
 
-    return filteredCategories.map(cat => ({
-      ...cat,
-      items: cat.items.filter(item =>
-        !item.tags.some(tag => excludedTags.includes(tag))
-      )
-    })).filter(cat => cat.items.length > 0);
-  }, [filteredCategories, excludedTags]);
+    // 태그 필터
+    if (excludedTags.length > 0) {
+      filtered = filtered.map(cat => ({
+        ...cat,
+        items: cat.items.filter(item =>
+          !item.tags.some(tag => excludedTags.includes(tag))
+        )
+      })).filter(cat => cat.items.length > 0);
+    }
+
+    // 가격대 필터
+    if (selectedPriceRange) {
+      filtered = filtered.filter(cat => cat.priceRange === selectedPriceRange);
+    }
+
+    return filtered;
+  }, [filteredCategories, excludedTags, selectedPriceRange]);
 
   // 어제 먹은 것 토글
   const toggleYesterday = (catId) => {
@@ -106,8 +160,11 @@ function App() {
     setStep(STEPS.START);
     setYesterdayChoices([]);
     setWantedFoods([]);
+    setSelectedMoods([]);
+    setWantedTab('category');
     setExcludedCategories([]);
     setExcludedTags([]);
+    setSelectedPriceRange(null);
     setPeopleCount(1);
     setCurrentPerson(0);
     setPeopleChoices([]);
@@ -181,6 +238,22 @@ function App() {
     return cats[Math.floor(Math.random() * cats.length)];
   };
 
+  // 검색 필터링
+  const searchFilteredCategories = useMemo(() => {
+    if (!searchQuery) return categories;
+
+    const query = searchQuery.toLowerCase();
+    return categories.map(cat => ({
+      ...cat,
+      items: cat.items.filter(item =>
+        item.name.toLowerCase().includes(query) ||
+        cat.name.toLowerCase().includes(query)
+      )
+    })).filter(cat =>
+      cat.items.length > 0 || cat.name.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
   // 통계
   const stats = getStats();
 
@@ -197,7 +270,7 @@ function App() {
       {step > STEPS.START && step < STEPS.RESULT && (
         <div className="progress-container">
           <div className="progress-bar">
-            {[1, 2, 3, 4, 5].map(i => (
+            {[1, 2, 3, 4, 5, 6].map(i => (
               <div
                 key={i}
                 className={`progress-step ${step >= i ? 'completed' : ''} ${step === i ? 'active' : ''}`}
@@ -222,11 +295,82 @@ function App() {
               시작하기
             </button>
 
+            {/* 검색 기능 */}
+            <div style={{ marginTop: '24px' }}>
+              <input
+                type="text"
+                placeholder="🔍 메뉴 이름으로 검색... (예: 김치찌개, 피자)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px 18px',
+                  fontSize: '15px',
+                  border: '2px solid var(--border)',
+                  borderRadius: '12px',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+              />
+              {searchQuery && (
+                <div style={{ marginTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                      검색 결과: {searchFilteredCategories.length}개 카테고리
+                    </p>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      ✕ 초기화
+                    </button>
+                  </div>
+                  <div className="quick-grid">
+                    {searchFilteredCategories.slice(0, 8).map(cat => (
+                      <div
+                        key={cat.id}
+                        className="quick-item"
+                        onClick={() => {
+                          setFinalCategory(cat);
+                          addHistory(cat, timeOfDay);
+                          setStep(STEPS.RESULT);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <span className="icon">{cat.icon}</span>
+                        <span className="name">{cat.name}</span>
+                        {cat.items.filter(item =>
+                          item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                        ).length > 0 && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                            {cat.items.filter(item =>
+                              item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                            )[0].name}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* 히스토리 & 즐겨찾기 버튼 */}
             <div className="feature-buttons">
               <button
                 className={`feature-btn ${showHistory ? 'active' : ''}`}
-                onClick={() => setShowHistory(!showHistory)}
+                onClick={() => {
+                  setShowHistory(!showHistory);
+                  setShowBlacklist(false);
+                }}
               >
                 📊 {showHistory ? '마인드맵 보기' : '히스토리'}
               </button>
@@ -238,35 +382,160 @@ function App() {
                     setFinalCategory(fav);
                     addHistory(fav, timeOfDay);
                     setStep(STEPS.RESULT);
+                  } else {
+                    alert('즐겨찾기가 없습니다. 메뉴를 선택한 후 즐겨찾기에 추가해주세요!');
                   }
                 }}
               >
                 ⭐ 즐겨찾기 추천
               </button>
+              <button
+                className={`feature-btn ${showBlacklist ? 'active' : ''}`}
+                onClick={() => {
+                  setShowBlacklist(!showBlacklist);
+                  setShowHistory(false);
+                }}
+              >
+                🚫 블랙리스트 ({blacklist.length})
+              </button>
             </div>
 
-            {showHistory ? (
+            {showBlacklist ? (
+              <div className="blacklist-section">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                    제외 목록
+                  </h3>
+                  {blacklist.length > 0 && (
+                    <button
+                      className="feature-btn"
+                      style={{ fontSize: '12px', padding: '6px 12px' }}
+                      onClick={() => {
+                        blacklist.forEach(id => toggleBlacklist(id));
+                      }}
+                    >
+                      🔓 전체 해제
+                    </button>
+                  )}
+                </div>
+                {blacklist.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>제외된 메뉴가 없어요</p>
+                ) : (
+                  <div className="quick-grid">
+                    {blacklist.map(id => {
+                      const cat = categories.find(c => c.id === id);
+                      if (!cat) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="quick-item"
+                          style={{ position: 'relative', opacity: 0.7 }}
+                        >
+                          <button
+                            style={{
+                              position: 'absolute',
+                              top: '4px',
+                              right: '4px',
+                              background: 'rgba(76, 175, 80, 0.8)',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              zIndex: 10
+                            }}
+                            onClick={() => toggleBlacklist(id)}
+                            title="해제"
+                          >
+                            ✓
+                          </button>
+                          <span className="icon">{cat.icon}</span>
+                          <span className="name">{cat.name}</span>
+                          <span style={{ fontSize: '10px', color: 'var(--text-danger)', display: 'block', marginTop: '4px' }}>
+                            제외됨
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : showHistory ? (
               <div className="history-section">
-                <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '24px', marginBottom: '16px' }}>
-                  최근 선택 기록
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+                    최근 선택 기록
+                  </h3>
+                  {history.length > 0 && (
+                    <button
+                      className="feature-btn"
+                      style={{ fontSize: '12px', padding: '6px 12px' }}
+                      onClick={() => {
+                        if (window.confirm('모든 기록을 삭제하시겠습니까?')) {
+                          clearHistory();
+                        }
+                      }}
+                    >
+                      🗑️ 전체 삭제
+                    </button>
+                  )}
+                </div>
                 {history.length === 0 ? (
                   <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>아직 기록이 없어요</p>
                 ) : (
                   <>
                     <div className="quick-grid">
-                      {history.slice(0, 8).map((entry, i) => (
+                      {history.slice(0, 8).map((entry) => (
                         <div
                           key={entry.id}
                           className="quick-item"
-                          onClick={() => {
-                            setFinalCategory(entry.category);
-                            addHistory(entry.category, timeOfDay);
-                            setStep(STEPS.RESULT);
-                          }}
+                          style={{ position: 'relative' }}
                         >
-                          <span className="icon">{entry.category.icon}</span>
-                          <span className="name">{entry.category.name}</span>
+                          <button
+                            style={{
+                              position: 'absolute',
+                              top: '4px',
+                              right: '4px',
+                              background: 'rgba(255, 0, 0, 0.7)',
+                              border: 'none',
+                              borderRadius: '50%',
+                              width: '20px',
+                              height: '20px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              zIndex: 10
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeHistoryItem(entry.id);
+                            }}
+                            title="삭제"
+                          >
+                            ×
+                          </button>
+                          <div
+                            onClick={() => {
+                              setFinalCategory(entry.category);
+                              addHistory(entry.category, timeOfDay);
+                              setStep(STEPS.RESULT);
+                            }}
+                            style={{ cursor: 'pointer', width: '100%', height: '100%' }}
+                          >
+                            <span className="icon">{entry.category.icon}</span>
+                            <span className="name">{entry.category.name}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                              {new Date(entry.timestamp).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -293,15 +562,17 @@ function App() {
             ) : (
               <div className="quick-select">
                 <h3>아니면 바로 고르기</h3>
-                <MindMap
-                  categories={categories}
-                  onCategoryClick={(cat) => {
-                    setFinalCategory(cat);
-                    addHistory(cat, timeOfDay);
-                    setStep(STEPS.RESULT);
-                  }}
-                  favorites={favorites}
-                />
+                <ErrorBoundary fallbackMessage="마인드맵을 표시할 수 없습니다">
+                  <MindMap
+                    categories={categories}
+                    onCategoryClick={(cat) => {
+                      setFinalCategory(cat);
+                      addHistory(cat, timeOfDay);
+                      setStep(STEPS.RESULT);
+                    }}
+                    favorites={favorites}
+                  />
+                </ErrorBoundary>
               </div>
             )}
           </div>
@@ -344,7 +615,7 @@ function App() {
 
             <div className="action-buttons">
               <button className="skip-btn" onClick={() => setStep(STEPS.WANTED)}>
-                기억 안 나
+                기억 안 남
               </button>
               <button
                 className="btn btn-primary"
@@ -362,19 +633,98 @@ function App() {
             <h2 className="step-title">먹고 싶은 거 있어?</h2>
             <p className="step-description">땡기는 거 다 골라봐! (여러 개 선택 가능)</p>
 
-            <div className="options-grid">
-              {filteredCategories.map(cat => (
-                <button
-                  key={cat.id}
-                  className={`option-btn ${wantedFoods.find(c => c.id === cat.id) ? 'selected' : ''}`}
-                  onClick={() => toggleWanted(cat)}
-                >
-                  {isFavorite(cat.id) && <span style={{ position: 'absolute', top: 4, left: 4, fontSize: '12px' }}>⭐</span>}
-                  <span className="icon">{cat.icon}</span>
-                  <span className="name">{cat.name}</span>
-                </button>
-              ))}
+            {/* 탭 전환 */}
+            <div className="wanted-tabs">
+              <button
+                className={`tab-btn ${wantedTab === 'category' ? 'active' : ''}`}
+                onClick={() => setWantedTab('category')}
+              >
+                📁 카테고리로 선택
+              </button>
+              <button
+                className={`tab-btn ${wantedTab === 'mood' ? 'active' : ''}`}
+                onClick={() => setWantedTab('mood')}
+              >
+                💭 상황으로 선택
+              </button>
             </div>
+
+            {/* 상황 선택 탭 */}
+            {wantedTab === 'mood' && (
+              <>
+                <div className="mood-grid">
+                  {moods.map(mood => (
+                    <button
+                      key={mood.id}
+                      className={`mood-btn ${selectedMoods.includes(mood.id) ? 'selected' : ''}`}
+                      onClick={() => {
+                        if (selectedMoods.includes(mood.id)) {
+                          setSelectedMoods(selectedMoods.filter(id => id !== mood.id));
+                        } else {
+                          setSelectedMoods([...selectedMoods, mood.id]);
+                        }
+                      }}
+                    >
+                      <span className="icon">{mood.icon}</span>
+                      <span className="name">{mood.name}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {selectedMoods.length > 0 && (
+                  <div className="selection-summary" style={{ marginTop: '20px' }}>
+                    <h4>선택한 상황 {selectedMoods.length}개</h4>
+                    <div className="chips">
+                      {selectedMoods.map(moodId => {
+                        const mood = moods.find(m => m.id === moodId);
+                        return (
+                          <span key={moodId} className="chip selected">
+                            {mood.icon} {mood.name}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '12px' }}>
+                      👇 추천 카테고리 {moodFilteredCategories.length}개
+                    </p>
+                  </div>
+                )}
+
+                {/* 상황 기반 필터링된 카테고리 */}
+                {selectedMoods.length > 0 && (
+                  <div className="options-grid" style={{ marginTop: '20px' }}>
+                    {moodFilteredCategories.map(cat => (
+                      <button
+                        key={cat.id}
+                        className={`option-btn ${wantedFoods.find(c => c.id === cat.id) ? 'selected' : ''}`}
+                        onClick={() => toggleWanted(cat)}
+                      >
+                        {isFavorite(cat.id) && <span style={{ position: 'absolute', top: 4, left: 4, fontSize: '12px' }}>⭐</span>}
+                        <span className="icon">{cat.icon}</span>
+                        <span className="name">{cat.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* 카테고리 선택 탭 */}
+            {wantedTab === 'category' && (
+              <div className="options-grid">
+                {filteredCategories.map(cat => (
+                  <button
+                    key={cat.id}
+                    className={`option-btn ${wantedFoods.find(c => c.id === cat.id) ? 'selected' : ''}`}
+                    onClick={() => toggleWanted(cat)}
+                  >
+                    {isFavorite(cat.id) && <span style={{ position: 'absolute', top: 4, left: 4, fontSize: '12px' }}>⭐</span>}
+                    <span className="icon">{cat.icon}</span>
+                    <span className="name">{cat.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {wantedFoods.length > 0 && (
               <div className="selection-summary">
@@ -394,7 +744,7 @@ function App() {
                 이전
               </button>
               <button className="skip-btn" onClick={() => setStep(STEPS.EXCLUDE)}>
-                없어
+                없음
               </button>
               {wantedFoods.length > 0 && (
                 <button className="btn btn-primary" onClick={handleWantedComplete}>
@@ -428,6 +778,42 @@ function App() {
               <button className="btn btn-secondary" onClick={() => setStep(STEPS.WANTED)}>
                 이전
               </button>
+              <button className="btn btn-primary" onClick={() => setStep(STEPS.PRICE)}>
+                다음
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: 가격대는? */}
+        {step === STEPS.PRICE && (
+          <div className="step-container">
+            <h2 className="step-title">예산은 얼마나?</h2>
+            <p className="step-description">오늘의 식사 예산을 선택해주세요</p>
+
+            <div className="people-options">
+              {priceRanges.map(range => (
+                <button
+                  key={range.id}
+                  className={`people-btn ${selectedPriceRange === range.value ? 'selected' : ''}`}
+                  onClick={() => setSelectedPriceRange(range.value)}
+                >
+                  <span className="count" style={{ fontSize: '2em' }}>{range.icon}</span>
+                  <span className="label">{range.name}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="action-buttons">
+              <button className="btn btn-secondary" onClick={() => setStep(STEPS.EXCLUDE)}>
+                이전
+              </button>
+              <button className="skip-btn" onClick={() => {
+                setSelectedPriceRange(null);
+                setStep(STEPS.PEOPLE);
+              }}>
+                상관없음
+              </button>
               <button className="btn btn-primary" onClick={() => setStep(STEPS.PEOPLE)}>
                 다음
               </button>
@@ -435,7 +821,7 @@ function App() {
           </div>
         )}
 
-        {/* Step 4: 몇 명? */}
+        {/* Step 5: 몇 명? */}
         {step === STEPS.PEOPLE && (
           <div className="step-container">
             <h2 className="step-title">몇 명이서 먹어?</h2>
@@ -455,7 +841,7 @@ function App() {
             </div>
 
             <div className="action-buttons">
-              <button className="btn btn-secondary" onClick={() => setStep(STEPS.EXCLUDE)}>
+              <button className="btn btn-secondary" onClick={() => setStep(STEPS.PRICE)}>
                 이전
               </button>
               <button className="btn btn-primary" onClick={() => setStep(STEPS.SELECT_MENU)}>
@@ -465,7 +851,7 @@ function App() {
           </div>
         )}
 
-        {/* Step 5: 메뉴 선택 (클릭 방식) */}
+        {/* Step 6: 메뉴 선택 (클릭 방식) */}
         {step === STEPS.SELECT_MENU && (
           <div className="step-container">
             <h2 className="step-title">
@@ -570,17 +956,26 @@ function App() {
           </div>
         )}
 
-        {/* Step 6: 룰렛 */}
+        {/* Step 7: 룰렛 */}
         {step === STEPS.ROULETTE && (
           <div className="step-container">
             <Roulette
               choices={peopleChoices}
               onComplete={handleRouletteComplete}
             />
+            <div className="action-buttons" style={{ marginTop: '20px' }}>
+              <button className="btn btn-secondary" onClick={() => {
+                setPeopleChoices([]);
+                setCurrentPerson(0);
+                setStep(STEPS.SELECT_MENU);
+              }}>
+                다시 선택
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Step 7: 결과 */}
+        {/* Step 8: 결과 */}
         {step === STEPS.RESULT && finalCategory && (
           <div className="step-container result-container">
             <div className="result-header">
@@ -598,12 +993,16 @@ function App() {
               </button>
             </div>
 
-            {/* <MindMap
-              categories={[finalCategory]}
-              selectedCategory={finalCategory}
-              showMenus={true}
-            /> */}
-            {/* TODO: MindMap crash on result screen to be fixed */}
+            <ErrorBoundary fallbackMessage="마인드맵을 표시할 수 없습니다">
+              <div style={{ height: '300px', marginBottom: '24px' }}>
+                <MindMap
+                  categories={[finalCategory]}
+                  selectedCategory={finalCategory}
+                  showMenus={true}
+                  favorites={favorites}
+                />
+              </div>
+            </ErrorBoundary>
 
             <h3 className="menu-section-title">추천 메뉴</h3>
 
@@ -624,12 +1023,30 @@ function App() {
               }
             </div>
 
-            <div className="action-buttons" style={{ marginTop: '32px' }}>
-              <button className="btn btn-secondary" onClick={reset}>
-                다시 하기
-              </button>
+            {/* 카카오 지도 */}
+            <ErrorBoundary fallbackMessage="지도를 불러올 수 없습니다">
+              <KakaoMap category={finalCategory} />
+            </ErrorBoundary>
+
+            <div className="action-buttons" style={{ marginTop: '32px', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                <button className="btn btn-secondary" onClick={() => {
+                  setFinalCategory(null);
+                  if (peopleChoices.length > 0) {
+                    setStep(STEPS.ROULETTE);
+                  } else {
+                    setStep(STEPS.SELECT_MENU);
+                  }
+                }}>
+                  이전
+                </button>
+                <button className="btn btn-primary" onClick={reset}>
+                  다시 하기
+                </button>
+              </div>
               <button
                 className="btn btn-secondary"
+                style={{ width: '100%' }}
                 onClick={() => toggleBlacklist(finalCategory.id)}
               >
                 {isBlacklisted(finalCategory.id) ? '🚫 블랙리스트 해제' : '🚫 다음엔 제외'}
