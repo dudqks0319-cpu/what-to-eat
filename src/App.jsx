@@ -292,18 +292,108 @@ function App() {
   // 통계
   const stats = getStats();
 
+  const AFFILIATE_CODES = {
+    baemin: import.meta.env.VITE_AFFILIATE_BAEMIN || 'demo-baemin',
+    yogiyo: import.meta.env.VITE_AFFILIATE_YOGIYO || 'demo-yogiyo',
+    coupangEats: import.meta.env.VITE_AFFILIATE_COUPANGEATS || 'demo-coupangeats',
+  };
+
+  const buildTrackedUrl = (baseUrl, params) => {
+    const url = new URL(baseUrl);
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, value);
+      }
+    });
+    return url.toString();
+  };
+
   const getOrderLinks = (category) => {
-    const query = encodeURIComponent(`${category.name} 배달`);
+    const keyword = `${category.name} 배달`;
+    const commonUtm = {
+      utm_source: 'what-to-eat',
+      utm_medium: 'app',
+      utm_campaign: `recommendation_${timeOfDay}`,
+      utm_content: category.id,
+    };
+
     return [
-      { name: '배민', url: `https://www.baemin.com/search/${query}` },
-      { name: '요기요', url: `https://www.yogiyo.co.kr/mobile/#/search/${query}` },
-      { name: '쿠팡이츠', url: `https://www.coupangeats.com/search?query=${query}` },
+      {
+        name: '배민',
+        url: buildTrackedUrl('https://www.baemin.com/search', {
+          keyword,
+          aff: AFFILIATE_CODES.baemin,
+          ...commonUtm,
+          utm_term: 'baemin',
+        }),
+      },
+      {
+        name: '요기요',
+        url: buildTrackedUrl('https://www.yogiyo.co.kr/mobile/', {
+          query: keyword,
+          aff: AFFILIATE_CODES.yogiyo,
+          ...commonUtm,
+          utm_term: 'yogiyo',
+        }),
+      },
+      {
+        name: '쿠팡이츠',
+        url: buildTrackedUrl('https://www.coupangeats.com/search', {
+          query: keyword,
+          aff: AFFILIATE_CODES.coupangEats,
+          ...commonUtm,
+          utm_term: 'coupangeats',
+        }),
+      },
+    ];
+  };
+
+  const getSponsoredSlots = (category) => {
+    const commonUtm = {
+      utm_source: 'what-to-eat',
+      utm_medium: 'sponsored-slot',
+      utm_campaign: `sponsor_${timeOfDay}`,
+      utm_content: category.id,
+    };
+
+    return [
+      {
+        id: 'sponsor-1',
+        title: '오늘의 스폰서 맛집',
+        subtitle: `${category.name} 카테고리 할인 쿠폰 보기`,
+        cta: '쿠폰 받기',
+        url: buildTrackedUrl('https://example.com/promo/restaurant', {
+          category: category.id,
+          ...commonUtm,
+          slot: '1',
+        }),
+      },
+      {
+        id: 'sponsor-2',
+        title: '신규 제휴 매장',
+        subtitle: `${category.name} 첫 주문 이벤트 참여`,
+        cta: '이벤트 보기',
+        url: buildTrackedUrl('https://example.com/promo/new-partner', {
+          category: category.id,
+          ...commonUtm,
+          slot: '2',
+        }),
+      },
     ];
   };
 
   const handleOrderClick = (platform, category) => {
     trackEvent('order_link_click', {
       platform,
+      categoryId: category.id,
+      categoryName: category.name,
+      timeOfDay,
+    });
+  };
+
+  const handleSponsorClick = (slotId, category) => {
+    trackEvent('sponsor_slot_click', {
+      slotId,
       categoryId: category.id,
       categoryName: category.name,
       timeOfDay,
@@ -1156,6 +1246,27 @@ function App() {
                     style={{ textDecoration: 'none' }}
                   >
                     {link.name}에서 보기
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="sponsored-section">
+              <h4>스폰서 추천</h4>
+              <div className="sponsored-grid">
+                {getSponsoredSlots(finalCategory).map((slot) => (
+                  <a
+                    key={slot.id}
+                    href={slot.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="sponsored-card"
+                    onClick={() => handleSponsorClick(slot.id, finalCategory)}
+                  >
+                    <p className="sponsored-badge">AD</p>
+                    <h5>{slot.title}</h5>
+                    <p>{slot.subtitle}</p>
+                    <span>{slot.cta} →</span>
                   </a>
                 ))}
               </div>
