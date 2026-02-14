@@ -221,6 +221,7 @@ function App() {
     if (menuSelections.length === 1) {
       setFinalCategory(menuSelections[0]);
       addHistory(menuSelections[0], timeOfDay);
+      trackEvent('recommendation_complete', { categoryId: menuSelections[0].id, timeOfDay });
       setStep(STEPS.RESULT);
     } else if (menuSelections.length > 1) {
       setPeopleChoices(menuSelections);
@@ -233,6 +234,7 @@ function App() {
     if (peopleCount === 1) {
       setFinalCategory(cat);
       addHistory(cat, timeOfDay);
+      trackEvent('recommendation_complete', { categoryId: cat.id, timeOfDay });
       setStep(STEPS.RESULT);
     } else {
       setPeopleChoices(prev => [...prev, cat]);
@@ -249,6 +251,7 @@ function App() {
     if (wantedFoods.length === 1) {
       setFinalCategory(wantedFoods[0]);
       addHistory(wantedFoods[0], timeOfDay);
+      trackEvent('recommendation_complete', { categoryId: wantedFoods[0].id, timeOfDay });
       setStep(STEPS.RESULT);
     } else if (wantedFoods.length > 1) {
       setPeopleChoices(wantedFoods);
@@ -262,6 +265,7 @@ function App() {
   const handleRouletteComplete = (winner) => {
     setFinalCategory(winner);
     addHistory(winner, timeOfDay);
+    trackEvent('recommendation_complete', { categoryId: winner.id, timeOfDay });
     setStep(STEPS.RESULT);
   };
 
@@ -321,7 +325,7 @@ function App() {
       {
         name: '배민',
         url: buildTrackedUrl('https://www.baemin.com/search', {
-          keyword,
+          q: keyword,
           aff: AFFILIATE_CODES.baemin,
           ...commonUtm,
           utm_term: 'baemin',
@@ -329,7 +333,7 @@ function App() {
       },
       {
         name: '요기요',
-        url: buildTrackedUrl('https://www.yogiyo.co.kr/mobile/', {
+        url: buildTrackedUrl('https://www.yogiyo.co.kr/mobile/#/search/', {
           query: keyword,
           aff: AFFILIATE_CODES.yogiyo,
           ...commonUtm,
@@ -343,6 +347,14 @@ function App() {
           aff: AFFILIATE_CODES.coupangEats,
           ...commonUtm,
           utm_term: 'coupangeats',
+        }),
+      },
+      {
+        name: '네이버지도',
+        url: buildTrackedUrl('https://map.naver.com/p/search/', {
+          query: keyword,
+          ...commonUtm,
+          utm_term: 'navermap',
         }),
       },
     ];
@@ -484,6 +496,7 @@ function App() {
                         onClick={() => {
                           setFinalCategory(cat);
                           addHistory(cat, timeOfDay);
+                          trackEvent('recommendation_complete', { categoryId: cat.id, timeOfDay });
                           setStep(STEPS.RESULT);
                           setSearchQuery('');
                         }}
@@ -524,6 +537,7 @@ function App() {
                   if (fav) {
                     setFinalCategory(fav);
                     addHistory(fav, timeOfDay);
+                    trackEvent('recommendation_complete', { categoryId: fav.id, timeOfDay });
                     setStep(STEPS.RESULT);
                   } else {
                     alert('즐겨찾기가 없습니다. 메뉴를 선택한 후 즐겨찾기에 추가해주세요!');
@@ -669,6 +683,7 @@ function App() {
                             onClick={() => {
                               setFinalCategory(entry.category);
                               addHistory(entry.category, timeOfDay);
+                              trackEvent('recommendation_complete', { categoryId: entry.category.id, timeOfDay });
                               setStep(STEPS.RESULT);
                             }}
                             style={{ cursor: 'pointer', width: '100%', height: '100%' }}
@@ -711,6 +726,7 @@ function App() {
                     onCategoryClick={(cat) => {
                       setFinalCategory(cat);
                       addHistory(cat, timeOfDay);
+                      trackEvent('recommendation_complete', { categoryId: cat.id, timeOfDay });
                       setStep(STEPS.RESULT);
                     }}
                     favorites={favorites}
@@ -1134,6 +1150,7 @@ function App() {
                       const random = getRandomCategory();
                       setFinalCategory(random);
                       addHistory(random, timeOfDay);
+                      trackEvent('recommendation_complete', { categoryId: random.id, timeOfDay });
                       setStep(STEPS.RESULT);
                     }}
                   >
