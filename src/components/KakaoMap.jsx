@@ -42,7 +42,7 @@ export default function KakaoMap({ category }) {
     }, []);
 
     // 지도 초기화
-    const initializeMap = () => {
+    function initializeMap() {
         try {
             const container = mapContainer.current;
             const options = {
@@ -78,7 +78,7 @@ export default function KakaoMap({ category }) {
             setError('지도를 초기화하는 중 오류가 발생했습니다.');
             console.error(err);
         }
-    };
+    }
 
     // 주변 음식점 검색
     const searchPlaces = (kakaoMap, lat, lng) => {

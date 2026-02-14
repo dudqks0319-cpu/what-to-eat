@@ -145,7 +145,7 @@ export default function MindMap({
     // 노드/엣지 계산
     const { nodes: calculatedNodes, edges: calculatedEdges } = useMemo(() =>
         createNodesAndEdges(categories, selectedCategory, showMenus, onCategoryClick, favorites),
-        [categories, selectedCategory, showMenus, favorites]
+        [categories, selectedCategory, showMenus, onCategoryClick, favorites]
     );
 
     const [nodes, setNodes, onNodesChange] = useNodesState(calculatedNodes);

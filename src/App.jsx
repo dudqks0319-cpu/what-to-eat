@@ -70,7 +70,7 @@ function App() {
       if (isBlacklisted(cat.id)) return false;
       return true;
     });
-  }, [yesterdayChoices, excludedCategories, blacklist]);
+  }, [yesterdayChoices, excludedCategories, isBlacklisted]);
 
   // 상황 기반 필터링
   const moodFilteredCategories = useMemo(() => {

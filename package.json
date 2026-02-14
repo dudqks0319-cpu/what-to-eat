@@ -1,12 +1,13 @@
 {
-  "name": "warped-pioneer",
-  "private": true,
+  "name": "what-to-eat",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "npm run lint && npm run build",
     "preview": "vite preview"
   },
   "dependencies": {
