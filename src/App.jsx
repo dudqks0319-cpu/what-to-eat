@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { trackEvent } from './utils/analytics';
 import { categories, excludeTags, priceRanges, moods, dietRestrictions } from './data/foodData';
 import { useFeatures } from './context/FeaturesContext';
 import MindMap from './components/MindMap';
@@ -290,6 +291,24 @@ function App() {
 
   // 통계
   const stats = getStats();
+
+  const getOrderLinks = (category) => {
+    const query = encodeURIComponent(`${category.name} 배달`);
+    return [
+      { name: '배민', url: `https://www.baemin.com/search/${query}` },
+      { name: '요기요', url: `https://www.yogiyo.co.kr/mobile/#/search/${query}` },
+      { name: '쿠팡이츠', url: `https://www.coupangeats.com/search?query=${query}` },
+    ];
+  };
+
+  const handleOrderClick = (platform, category) => {
+    trackEvent('order_link_click', {
+      platform,
+      categoryId: category.id,
+      categoryName: category.name,
+      timeOfDay,
+    });
+  };
 
   return (
     <div className="app">
@@ -1122,6 +1141,25 @@ function App() {
             <ErrorBoundary fallbackMessage="지도를 불러올 수 없습니다">
               <KakaoMap category={finalCategory} />
             </ErrorBoundary>
+
+            <div className="selection-summary" style={{ marginTop: '20px' }}>
+              <h4>배달 앱으로 바로 주문</h4>
+              <div className="chips">
+                {getOrderLinks(finalCategory).map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="chip selected"
+                    onClick={() => handleOrderClick(link.name, finalCategory)}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    {link.name}에서 보기
+                  </a>
+                ))}
+              </div>
+            </div>
 
             <div className="action-buttons" style={{ marginTop: '32px', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
