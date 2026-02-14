@@ -407,7 +407,7 @@ function App() {
           <span className="emoji">🍽️</span>
           {timeLabel} 뭐먹지?
         </h1>
-        <p className="subtitle">선택장애 탈출 프로젝트</p>
+        <p className="subtitle">오늘의 메뉴를 빠르게 정해드려요</p>
       </header>
 
       {step > STEPS.START && step < STEPS.RESULT && (
@@ -1263,7 +1263,7 @@ function App() {
                     className="sponsored-card"
                     onClick={() => handleSponsorClick(slot.id, finalCategory)}
                   >
-                    <p className="sponsored-badge">AD</p>
+                    <p className="sponsored-badge">광고</p>
                     <h5>{slot.title}</h5>
                     <p>{slot.subtitle}</p>
                     <span>{slot.cta} →</span>
