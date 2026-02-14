@@ -6,6 +6,7 @@ import MindMap from './components/MindMap';
 import Roulette from './components/Roulette';
 import ErrorBoundary from './components/ErrorBoundary';
 import KakaoMap from './components/KakaoMap';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import './App.css';
 
 const STEPS = {
@@ -38,6 +39,7 @@ function App() {
   const [menuSelections, setMenuSelections] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showBlacklist, setShowBlacklist] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
@@ -526,6 +528,7 @@ function App() {
                 onClick={() => {
                   setShowHistory(!showHistory);
                   setShowBlacklist(false);
+                  setShowAnalytics(false);
                 }}
               >
                 📊 {showHistory ? '마인드맵 보기' : '히스토리'}
@@ -551,9 +554,20 @@ function App() {
                 onClick={() => {
                   setShowBlacklist(!showBlacklist);
                   setShowHistory(false);
+                  setShowAnalytics(false);
                 }}
               >
                 🚫 블랙리스트 ({blacklist.length})
+              </button>
+              <button
+                className={`feature-btn ${showAnalytics ? 'active' : ''}`}
+                onClick={() => {
+                  setShowAnalytics(!showAnalytics);
+                  setShowHistory(false);
+                  setShowBlacklist(false);
+                }}
+              >
+                📈 전환대시보드
               </button>
             </div>
 
@@ -717,6 +731,8 @@ function App() {
                   </>
                 )}
               </div>
+            ) : showAnalytics ? (
+              <AnalyticsDashboard />
             ) : (
               <div className="quick-select">
                 <h3>아니면 바로 고르기</h3>
